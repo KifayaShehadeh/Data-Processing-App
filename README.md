@@ -56,10 +56,7 @@ This will open the web application in your default browser. If it doesn't automa
 
 ## Additional Notes
 
-This project aims to provide a comprehensive solution for automating data cleaning tasks, with a focus on flexibility and user input. Given the variety of datasets, the application is designed to handle general cases with an understanding that some level of customization may be necessary.
+This project aims to provide a comprehensive solution for automating data cleaning tasks, with a focus on flexibility and user input. Given the variety of datasets, the application is designed to handle general cases with an understanding that some level of customisation may be necessary.
 
 For detailed information on the data type inference and conversion process, please refer to the provided Python scripts in the backend directory.
 
-## Contributors
-
-This project is the result of collaborative efforts. If you encounter any issues or have suggestions for improvements, please feel free to contribute or open an issue.
