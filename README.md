@@ -24,15 +24,15 @@ This web application is designed to process and display data, focusing on data t
 1. Navigate to the backend directory.
 2. Install the required Python packages:
 
-pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 3. Run the Django migrations to set up your database:
 
-python manage.py migrate
+`python manage.py migrate`
 
 4. Start the Django development server:
 
-python manage.py runserver
+`python manage.py runserver`
 
 
 ### Setting Up the Frontend
@@ -40,11 +40,11 @@ python manage.py runserver
 1. Navigate to the frontend directory where `package.json` is located.
 2. Install the required Node.js packages:
 
-npm install
+`npm install`
 
 3. Start the React development server:
 
-npm start
+`npm start`
 
 This will open the web application in your default browser. If it doesn't automatically open, you can access it by visiting [http://localhost:3000](http://localhost:3000) in your browser.
 
