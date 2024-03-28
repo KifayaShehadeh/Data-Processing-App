@@ -52,7 +52,7 @@ This will open the web application in your default browser. If it doesn't automa
 
 1. **Upload a File:** Click on the "Upload" button and select a CSV or Excel file to process. The application will automatically process the file and display the inferred data types.
 2. **View Processed Data:** After uploading, the processed data along with the inferred data types will be displayed.
-3. **Override Data Types:** *(Feature currently under development)* Users will be able to override the inferred data types by selecting a column and specifying a new data type.
+3. **Override Data Types:** Users will be able to override the inferred data types by selecting a column and specifying a new data type.
 
 ## Additional Notes
 
