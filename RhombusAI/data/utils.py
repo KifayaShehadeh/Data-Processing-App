@@ -9,7 +9,6 @@ def is_category(col: pd.Series, max_unique_ratio=0.5):
             return True
     return False
 
-
 def is_complex(col: pd.Series):
     try:
         for value in col.dropna():
@@ -18,100 +17,90 @@ def is_complex(col: pd.Series):
         return False
     return True
 
+def convert_to_datetime(df, col, date_formats):
+    converted_col = None
+    for date_format in date_formats:
+        try:
+            converted_col = pd.to_datetime(df[col], errors='coerce', format=date_format)
+            if converted_col.notna().any():
+                break
+        except ValueError:
+            continue
+    return converted_col if converted_col is not None and converted_col.notna().any() else df[col]
+
+def convert_to_numeric(df, col):
+    converted_col = pd.to_numeric(df[col], errors='coerce')
+    if converted_col.notna().any():
+        df[col] = converted_col
+        if df[col].dtype == 'float':
+            df[col] = pd.to_numeric(df[col], downcast='float')
+        elif df[col].dtype == 'int':
+            df[col] = pd.to_numeric(df[col], downcast='integer')
+    return df[col]
+
+def convert_to_timedelta(df, col):
+    converted_col = pd.to_timedelta(df[col], errors='coerce')
+    return converted_col if converted_col.notna().any() else df[col]
+
+def convert_to_boolean(df, col):
+    if all(val.lower() in ['true', 'false'] for val in df[col].astype(str).str.lower()):
+        return df[col].astype(bool)
+    return df[col]
+
+def convert_to_complex(df, col, is_complex):
+    if is_complex(df[col]):
+        return df[col].apply(lambda x: complex(x) if pd.notna(x) else x)
+    return df[col]
+
+def convert_to_categorical(df, col, is_category):
+    if is_category(df[col]):
+        return df[col].astype('category')
+    return df[col]
+
 def infer_and_convert_data_types(df):
+    date_formats = [
+        '%Y-%m-%d',  # Standard YYYY-MM-DD
+        '%d-%m-%Y',  # Non-standard DD-MM-YYYY
+        '%m/%d/%Y',  # Standard MM/DD/YYYY
+        '%d/%m/%Y',  # Standard DD/MM/YYYY
+        '%Y/%m/%d',  # Non-standard YYYY/MM/DD
+        '%Y%m%d',    # Standard YYYYMMDD
+        '%m/%Y',      # Standard MM/YYYY
+        '%Y/%m',      # Non-standard YYYY/MM
+        '%m.%d.%Y',  # Non-standard MM.DD.YYYY
+        '%d.%m.%Y',  # Non-standard DD.MM.YYYY
+        '%d %B',     # Non-standard DD Month (e.g., 01 January)
+        '%d%B',      # Non-standard DDMonth (e.g., 01January)
+        '%B %d',     # Non-standard Month DD (e.g., January 01)
+        '%B%d',      # Non-standard MonthDD (e.g., January01)
+        '%d %B %Y',  # Non-standard DD Month YYYY (e.g., 01 January 2022)
+        '%d%B%Y',    # Non-standard DDMonthYYYY (e.g., 01January2022)
+        '%B %d, %Y', # Non-standard Month DD, YYYY (e.g., January 01, 2022) **
+        '%Y %B %d',   # Non-standard YYYY Month DD (e.g., 2022 January 01)
+        '%B %Y',       # Non-standard Month Year (e.g., January 2022)
+        '%Y %B',       # Non-standard Year Month (e.g., 2022 January)
+        '%B%Y',        # Non-standard MonthYear (e.g., January2022)
+        '%Y%B',        # Non-standard YearMonth (e.g., 2022January)
+    ]
+
     for col in df.columns:
-        original_col_data = df[col]
 
-       # Handle numeric types, accounting for placeholders like 'Not Available'
-        if df[col].dtype == object:
-            converted_col = pd.to_numeric(df[col], errors='coerce')
-            if converted_col.notna().any():  # If there are any numeric values
-                df[col] = converted_col
-                # Downcast to appropriate numeric type
-                if df[col].dtype == 'float':
-                    df[col] = pd.to_numeric(df[col], downcast='float')
-                elif df[col].dtype == 'int':
-                    df[col] = pd.to_numeric(df[col], downcast='integer')
-            else:
-                df[col] = original_col_data  # Revert for further analysis
+        if df[col].dtype == object or df[col].dtype == int:
+            df[col] = convert_to_datetime(df, col, date_formats)
 
-        # Date conversion
         if df[col].dtype == object:
-            converted_col = pd.to_datetime(df[col], errors='coerce')
-            if converted_col.notna().any():
-                df[col] = converted_col
-            else:
-                df[col] = original_col_data
-        
-        # Timedelta conversion
-        if df[col].dtype == object:
-            converted_col = pd.to_timedelta(df[col], errors='coerce')
-            if converted_col.notna().any():
-                df[col] = converted_col
-            else:
-                df[col] = original_col_data
+            df[col] = convert_to_numeric(df, col)
 
-        # Boolean conversion
         if df[col].dtype == object:
-            if all(val.lower() in ['true', 'false'] for val in df[col].astype(str).str.lower()):
-                df[col] = df[col].astype(bool)
-        
-        # Check for complex numbers
-        if df[col].dtype == object:
-            if is_complex(df[col]):
-                df[col] = df[col].apply(lambda x: complex(x) if pd.notna(x) else x)
+            df[col] = convert_to_timedelta(df, col)
 
-        # Categorical data detection using the is_category function
         if df[col].dtype == object:
-            if is_category(df[col]):
-                df[col] = df[col].astype('category')
+            df[col] = convert_to_boolean(df, col)
+
+        if df[col].dtype == object:
+            df[col] = convert_to_complex(df, col, is_complex)
+
+        if df[col].dtype == object:
+            df[col] = convert_to_categorical(df, col, is_category)
 
     return df
-
-def override_data_type(df, column_name, new_data_type):
-    """
-    Attempts to convert the data type of a specified column in a DataFrame.
-
-    Parameters:
-    - df: pandas.DataFrame - The DataFrame containing the data.
-    - column_name: str - The name of the column to convert.
-    - new_data_type: str - The desired new data type (e.g., 'int', 'float', 'str', 'bool', 'datetime64', 'timedelta64', 'category', 'complex').
-
-    Returns:
-    - pandas.DataFrame: The DataFrame with the specified column's data type converted.
-    """
-    if column_name not in df.columns:
-        raise ValueError(f"Column '{column_name}' not found in DataFrame.")
-    
-    original_col_data = df[column_name].copy()
-
-    try:
-        if new_data_type == 'complex':
-            df[column_name] = df[column_name].apply(lambda x: complex(x) if pd.notna(x) else x)
-        elif new_data_type == 'category':
-            df[column_name] = df[column_name].astype('category')
-        elif new_data_type in ['int', 'float', 'bool', 'str']:
-            df[column_name] = df[column_name].astype(new_data_type)
-        elif new_data_type == 'datetime64':
-            df[column_name] = pd.to_datetime(df[column_name], errors='coerce')
-        elif new_data_type == 'timedelta64':
-            df[column_name] = pd.to_timedelta(df[column_name], errors='coerce')
-        else:
-            raise ValueError(f"Unsupported data type: {new_data_type}")
-    except (ValueError, TypeError):
-        print(f"Conversion to {new_data_type} failed for column '{column_name}'. Reverting to original data.")
-        df[column_name] = original_col_data
-
-    return df
-
-# Test the function with your DataFrame
-# df = pd.read_csv('sample_data.csv')
-# print("Data types before inference:")
-# print(df.dtypes)
-
-# df = infer_and_convert_data_types(df)
-
-# print("\nData types after inference:")
-# print(df.dtypes)
-
-# %%

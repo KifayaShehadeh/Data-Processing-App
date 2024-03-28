@@ -24,7 +24,7 @@ def get_user_friendly_dtype(dtype):
             'category': 'Category',
         }.get(dtype_name, dtype_name)  # Default to original if no match found
     
-def serialize_dataframe(df):
+def serialise_dataframe(df):
     """Convert a DataFrame to a list of dicts with JSON serializable values, converting NaN to None (null in JSON)."""
     df = df.copy()
     for column in df.columns:
@@ -61,7 +61,7 @@ def upload_file(request):
                 return JsonResponse({'error': 'Unsupported file format. Only .csv and .xlsx are supported.'}, status=400)
 
             processed_df = infer_and_convert_data_types(df)
-            processed_data_list = serialize_dataframe(processed_df)
+            processed_data_list = serialise_dataframe(processed_df)
             print(json.dumps(processed_data_list, indent=4))
             columns_with_types = [{'column': col, 'data_type': get_user_friendly_dtype(dtype)} for col, dtype in zip(processed_df.columns, processed_df.dtypes)]
 
