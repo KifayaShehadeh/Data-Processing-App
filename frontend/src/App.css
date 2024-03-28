@@ -1,0 +1,99 @@
+/* App.css */
+body {
+  font-family: 'Poppins', sans-serif; /* A more playful font */
+  background-color: #fff3e0; /* Soft peach background for a softer look */
+  margin: 0;
+  padding: 20px;
+  color: #5c3c00; /* A softer text color */
+}
+
+h1, h2, h3 {
+  color: #ff6f3c; /* A soft, warm color for headings */
+}
+
+form {
+  background-color: #ffede0; /* A light background for the form */
+  padding: 20px;
+  border-radius: 20px; /* Rounded corners for the form */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+  margin-bottom: 40px; /* More space below the form */
+}
+
+input[type="file"] {
+  border: 1px solid #ffab91; /* Softer orange border */
+  padding: 10px;
+  border-radius: 10px;
+  background-color: #ffe0cc; /* Soft orange background */
+  margin-right: 10px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button {
+  background-color: #ffab91; /* Soft orange background */
+  color: #fff;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 25px; /* More rounded buttons */
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for buttons */
+  font-size: 1.1em; /* Larger text for better readability */
+}
+
+button:hover {
+  background-color: #ff8a65; /* Slightly darker orange on hover */
+}
+
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 15px; /* More pronounced rounded corners for the table */
+  overflow: hidden; /* To make sure the rounded corners are respected */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for the table */
+}
+
+table, th, td {
+  border: 1px solid #ffab91; /* Soft orange border */
+}
+
+th, td {
+  text-align: center; /* Center align for a neater look */
+  padding: 15px; /* More padding for a "plumper" feel */
+}
+
+th {
+  background-color: #ffab91; /* Header background */
+  color: #5c3c00; /* Text color for contrast */
+  font-size: 1.1em; /* Slightly larger font for headers */
+}
+
+tbody tr:nth-child(even) {
+  background-color: #fff3e0; /* Even lighter background for even rows */
+}
+
+tbody tr:nth-child(odd) {
+  background-color: #ffede0; /* Different background for odd rows */
+}
+
+tbody tr:hover {
+  background-color: #ffdede; /* Soft hover color */
+}
+
+thead tr:first-child th:first-child {
+  border-top-left-radius: 15px;
+}
+
+thead tr:first-child th:last-child {
+  border-top-right-radius: 15px;
+}
+
+tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 15px;
+}
+
+tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 15px;
+}
