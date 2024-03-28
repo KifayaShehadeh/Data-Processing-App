@@ -22,11 +22,10 @@ This web application is designed to process and display data, focusing on data t
 ### Setting Up the Backend
 
 1. Navigate to the backend directory.
-2. Install the required Python packages:
-
-`pip install -r requirements.txt`
-
-3. Run the Django migrations to set up your database:
+   
+3. Install the required Python packages.
+   
+5. Run the Django migrations to set up your database:
 
 `python manage.py migrate`
 
@@ -38,7 +37,8 @@ This web application is designed to process and display data, focusing on data t
 ### Setting Up the Frontend
 
 1. Navigate to the frontend directory where `package.json` is located.
-2. Install the required Node.js packages:
+   
+3. Install the required Node.js packages:
 
 `npm install`
 
