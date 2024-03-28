@@ -7,81 +7,135 @@ body {
   color: #5c3c00; /* A softer text color */
 }
 
+/* Consistent title sizes */
 h1, h2, h3 {
-  color: #ff6f3c; /* A soft, warm color for headings */
+  font-size: 2em; 
+  color: #ff6f3c; 
+  margin-top: 0; 
+  margin-bottom: 0em; 
+  margin-top: 0.5em;
 }
 
+/* Style for the section that contains the forms */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; 
+}
+
+
+/* General form styles */
 form {
-  background-color: #ffede0; /* A light background for the form */
+  background-color: #ffede0; 
   padding: 20px;
-  border-radius: 20px; /* Rounded corners for the form */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
-  margin-bottom: 40px; /* More space below the form */
+  border-radius: 20px; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  margin-bottom: 40px; 
+  display: block;
+  max-width: none; 
+  margin: 40px 0; 
 }
 
+/* Adjust form labels to not stretch full width */
+form label {
+  width: auto; 
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Styling the dropdown select elements */
+select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 5px;
+  margin-bottom: 20px; 
+  border: 1px solid #ffab91;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+select:focus {
+  border-color: #ff6f3c; 
+  outline: none;
+}
+
+/* Align the 'Override' button to the left and add margin-top for spacing */
+button[type="submit"] {
+  margin-top: 20px;
+}
+
+/* Increased interaction for select elements */
+select:hover {
+  border-color: #ff8a65;
+}
+
+/* File input styles */
 input[type="file"] {
-  border: 1px solid #ffab91; /* Softer orange border */
+  border: 1px solid #ffab91; 
   padding: 10px;
   border-radius: 10px;
-  background-color: #ffe0cc; /* Soft orange background */
+  background-color: #ffe0cc; 
   margin-right: 10px;
   cursor: pointer;
   font-weight: bold;
 }
 
+/* Button styles */
 button {
-  background-color: #ffab91; /* Soft orange background */
+  background-color: #ffab91;
   color: #fff;
   border: none;
   padding: 12px 25px;
-  border-radius: 25px; /* More rounded buttons */
+  border-radius: 25px; 
   cursor: pointer;
   transition: background-color 0.3s ease;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for buttons */
-  font-size: 1.1em; /* Larger text for better readability */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+  font-size: 1.1em; 
 }
 
 button:hover {
-  background-color: #ff8a65; /* Slightly darker orange on hover */
+  background-color: #ff8a65; 
 }
 
+/* Table styles */
 table {
   width: 100%;
   margin-top: 20px;
   border-collapse: separate;
   border-spacing: 0;
-  border-radius: 15px; /* More pronounced rounded corners for the table */
-  overflow: hidden; /* To make sure the rounded corners are respected */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow for the table */
+  border-radius: 15px; 
+  overflow: hidden; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
 }
 
 table, th, td {
-  border: 1px solid #ffab91; /* Soft orange border */
+  border: 1px solid #ffab91; 
 }
 
 th, td {
-  text-align: center; /* Center align for a neater look */
-  padding: 15px; /* More padding for a "plumper" feel */
+  text-align: center;
+  padding: 15px;
 }
 
 th {
-  background-color: #ffab91; /* Header background */
-  color: #5c3c00; /* Text color for contrast */
-  font-size: 1.1em; /* Slightly larger font for headers */
+  background-color: #ffab91;
+  color: #5c3c00;
+  font-size: 1.1em; 
 }
 
 tbody tr:nth-child(even) {
-  background-color: #fff3e0; /* Even lighter background for even rows */
+  background-color: #fff3e0;
 }
 
 tbody tr:nth-child(odd) {
-  background-color: #ffede0; /* Different background for odd rows */
+  background-color: #ffede0;
 }
 
 tbody tr:hover {
-  background-color: #ffdede; /* Soft hover color */
+  background-color: #ffdede;
 }
 
+/* Rounded corners for table */
 thead tr:first-child th:first-child {
   border-top-left-radius: 15px;
 }
@@ -96,4 +150,123 @@ tbody tr:last-child td:first-child {
 
 tbody tr:last-child td:last-child {
   border-bottom-right-radius: 15px;
+}
+
+/* Message styles */
+.error-message, .success-message {
+  text-align: center;
+  font-size: 1em;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 5px;
+  width: auto; 
+  margin: 10px 0; 
+}
+
+.error-message {
+  background-color: #ffcccb; 
+  border: 1px solid red;
+  color: red;
+}
+
+.success-message {
+  background-color: #ddffdd; 
+  border: 1px solid green;
+  color: green;
+}
+
+/* Adjust the max-width of the form and its elements */
+form {
+  max-width: 500px; 
+  margin: 40px 0; 
+}
+
+/* Apply max-width to form elements */
+form label select,
+form button[type="submit"] {
+  max-width: 100%; 
+}
+
+
+form label select,
+form button[type="submit"] {
+  width: 300px; 
+}
+
+/* Style adjustments for the form container */
+.form-override-container {
+  max-width: 500px; 
+  margin: auto; 
+}
+
+/* Directly style the select elements */
+form select {
+  width: 100%; 
+  margin-top: 0.5em; 
+  margin-bottom: 1em; 
+}
+
+/* Style the button */
+form button[type="submit"] {
+  width: 100%; 
+  margin-top: 1em; 
+}
+
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #fff3e0;
+  margin: 0;
+  padding: 20px;
+  color: #5c3c00;
+}
+
+form {
+  display: block;
+  margin: 15px 0;
+}
+
+form label {
+  margin-bottom: 1em;
+}
+
+form select {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 1em;
+  border: 1px solid #ffab91;
+  background-color: #fff;
+  color: #5c3c00;
+}
+
+form button[type="submit"] {
+  padding: 10px 20px;
+  background-color: #ffab91;
+  color: #fff;
+  border: none;
+  margin-top: 1em;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.error-message, .success-message {
+  text-align: center;
+  font-size: 1em;
+  font-weight: bold;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+}
+
+.error-message {
+  background-color: #ffcccb;
+  border: 1px solid red;
+  color: red;
+}
+
+.success-message {
+  background-color: #ddffdd;
+  border: 1px solid green;
+  color: green;
 }
