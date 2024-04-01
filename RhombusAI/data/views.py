@@ -1,30 +1,16 @@
 import json
+import pickle
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import Dataset
 from .utils import infer_and_convert_data_types, override_data, get_user_friendly_dtype, serialise_dataframe
 import pandas as pd
 import traceback
+from django.core.serializers.json import DjangoJSONEncoder
+from django.core.files.base import ContentFile
 
 @csrf_exempt
 def upload_file(request):
-    """
-    Handles file uploads, supporting CSV and XLSX formats. This view processes the uploaded file to infer and convert
-    data types of each column, and returns a JSON response containing processed data and columns with data types.
-
-    Request:
-    - Method: POST
-    - Body: Multipart form data with a key 'datafile' containing the file to be uploaded.
-    - Supported file formats: .csv, .xlsx
-
-    Response:
-    - On success: Returns HTTP 200 with JSON { 'processed_data': [...], 'columns_with_types': [...] }
-    - On error: Returns HTTP 400 for bad requests (e.g., no file provided or unsupported file format), or HTTP 500 for
-      internal errors.
-
-    Side effects:
-    - Saves the uploaded file and its processed metadata (including column data types) to the database.
-    """
     if request.method == 'POST':
         datafile = request.FILES.get('datafile', None)
         if datafile is None:
@@ -40,14 +26,20 @@ def upload_file(request):
 
             processed_df = infer_and_convert_data_types(df)
             processed_data_list = serialise_dataframe(processed_df)
+            processed_data_pkl = pickle.dumps(processed_df)
             columns_with_types = [{'column': col, 'data_type': get_user_friendly_dtype(dtype)} for col, dtype in zip(processed_df.columns, processed_df.dtypes)]
-
+            # Serialize dataframe using pickle
+            processed_data_pkl = pickle.dumps(processed_df)
+            
             # Save the uploaded data and column types to the database
             dataset = Dataset(file_name=datafile.name, original_file=datafile)
+            dataset.processed_file_pkl = processed_data_pkl 
             dataset.save()
-            for col_name, inferred_type in zip(processed_df.columns, processed_df.dtypes):
-                user_friendly_type = get_user_friendly_dtype(inferred_type)
-                dataset.column_types.create(column_name=col_name, original_type=str(inferred_type), inferred_type=str(inferred_type), user_modified_type=user_friendly_type)
+
+            for col_name, dtype in zip(processed_df.columns, processed_df.dtypes):
+                user_friendly_type = get_user_friendly_dtype(dtype)
+                dataset.column_types.create(column_name=col_name, original_type=str(dtype), inferred_type=str(dtype), user_modified_type=user_friendly_type)
+
             return JsonResponse({'processed_data': processed_data_list, 'columns_with_types': columns_with_types})
         except Exception as e:
             traceback.print_exc()
@@ -57,26 +49,6 @@ def upload_file(request):
 
 @csrf_exempt
 def override_data_type(request):
-    """
-    Allows clients to override the data type of a specific column in the most recently uploaded dataset. It reads
-    the dataset from the file system, applies the override, updates the database, and returns the updated dataset
-    and column types.
-
-    Request:
-    - Method: POST
-    - Body: JSON containing 'column' (name of the column to override) and 'new_type' (the new data type to apply).
-      Example: { "column": "ColumnName", "new_type": "Integer" }
-
-    Response:
-    - On success: Returns HTTP 200 with JSON containing the updated 'processed_data' and 'columns_with_types', along
-      with a success message.
-    - On error: Returns HTTP 400 for bad requests (e.g., no dataset available, invalid JSON), HTTP 500 for internal
-      errors.
-
-    Side effects:
-    - Updates the user-defined column data type in the database for the most recent dataset.
-    - Does not modify the original file but alters the representation of its data in subsequent responses.
-    """
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -90,25 +62,14 @@ def override_data_type(request):
             if dataset is None:
                 return JsonResponse({'error': 'No dataset available to modify.'}, status=400)
 
-            file_path = dataset.original_file.path
-            if file_path.lower().endswith('.csv'):
-                try:
-                    last_uploaded_df = pd.read_csv(file_path)
-                except Exception as e:
-                    return JsonResponse({'error': f'Error reading CSV file: {str(e)}'}, status=500)
-            elif file_path.lower().endswith('.xlsx'):
-                try:
-                    last_uploaded_df = pd.read_excel(file_path)
-                except Exception as e:
-                    return JsonResponse({'error': f'Error reading Excel file: {str(e)}'}, status=500)
-            else:
-                return JsonResponse({'error': 'Unsupported file format. Only .csv and .xlsx are supported.'}, status=400)
+            # Deserialize dataframe from pickle
+            processed_df = pickle.loads(dataset.processed_file_pkl)
 
             # Retrieve column types from the database
             column_types = dataset.column_types.all()
             column_types_dict = {col.column_name: col for col in column_types}
 
-            success, message = override_data(last_uploaded_df, column, new_type)
+            success, message = override_data(processed_df, column, new_type)
 
             if success:
                 # Update column type in the database
@@ -116,14 +77,18 @@ def override_data_type(request):
                 column_obj.user_modified_type = new_type
                 column_obj.save()
 
+                # Re-serialize and save updated dataframe
+                dataset.processed_file_pkl = pickle.dumps(processed_df)
+                dataset.save()
+
                 # Update columns_with_types
                 columns_with_types = [
                     {'column': col.column_name, 'data_type': col.user_modified_type or col.inferred_type}
                     for col in column_types
                 ]
 
-                processed_data_list = serialise_dataframe(last_uploaded_df)
-
+                processed_data_list = serialise_dataframe(processed_df)
+                print(processed_data_list)
                 return JsonResponse({
                     'processed_data': processed_data_list,
                     'columns_with_types': columns_with_types,

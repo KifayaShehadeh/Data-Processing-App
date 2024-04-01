@@ -9,6 +9,7 @@ class Dataset(models.Model):
     - file_name (CharField): The name of the uploaded file.
     - processed_at (DateTimeField): The date and time when the dataset was processed. Optional and can be blank.
     - original_file (FileField): A file field that stores the uploaded dataset file. Files are uploaded to the 'datasets/' directory.
+    - processed_data (TextField): Field to store the processed data as a JSON string.
 
     Methods:
     - __str__(self): Returns a human-readable string representation of the model, which is the file name of the uploaded dataset.
@@ -17,7 +18,8 @@ class Dataset(models.Model):
     file_name = models.CharField(max_length=255)
     processed_at = models.DateTimeField(null=True, blank=True)
     original_file = models.FileField(upload_to='datasets/')
-    # Additional fields as required
+    processed_data = models.TextField(blank=True, null=True)  # New field to store processed data
+    processed_file_pkl = models.BinaryField(null=True, blank=True)
 
     def str(self):
         return self.file_name

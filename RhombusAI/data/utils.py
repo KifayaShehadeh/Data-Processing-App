@@ -1,147 +1,47 @@
+import re
 import pandas as pd
 import numpy as np
 import traceback
+from dateutil import parser
+from dateutil.parser import ParserError
+from .conversions import is_allowed_none, convert_to_boolean, convert_to_categorical, convert_to_datetime, convert_to_numeric, convert_to_timedelta, convert_to_complex, looks_like_number
+from .typechecks import is_category, is_complex, is_timedelta, looks_like_currency, looks_like_number
+from .data_handling import normalise_boolean, parse_mixed_data, can_parse_date, preprocess_for_float_conversion
+from django.db.models import Max
+from .models import Dataset, ColumnType
+from django.db.models import Max
 
 column_type_overrides = {}
 
-def is_category(col: pd.Series, max_unique_ratio=0.5):
-    """
-    Determines if the given pandas Series should be treated as a categorical data type based on its unique value ratio.
+def infer_data_type(col):
+    # Preprocess column, removing commas and converting to None types as needed
+    col_normalised_bool = col.apply(normalise_boolean)
+    if pd.api.types.is_bool_dtype(col_normalised_bool):
+        return 'Boolean'
+    
+    col_cleaned = col.apply(lambda x: x.replace(',', '').strip() if isinstance(x, str) else x)
+    col_cleaned = col_cleaned.apply(lambda x: None if is_allowed_none(x) else x)
 
-    Parameters:
-    - col (pd.Series): The pandas Series to analyse.
-    - max_unique_ratio (float): The maximum ratio of unique values to total values that allows the Series to be 
-      considered categorical. Defaults to 0.5.
+    print(f"Cleaned {col.name}:", col_cleaned.tolist())  # Debug print statement
+    if all(isinstance(x, bool) for x in col_cleaned.dropna()):
+        return 'Boolean'
+    if any(is_complex(x) for x in col_cleaned.dropna()):
+        return 'Complex Number'
+    if all(looks_like_number(x) for x in col_cleaned.dropna()):
+        return 'Decimal'
+    if all(looks_like_currency(x) for x in col_cleaned.dropna()):
+        return 'Decimal'
+    if any(is_timedelta(str(x)) for x in col.dropna()):
+        return 'Time Duration'
+    if any(can_parse_date(str(x)) for x in col.dropna()):
+        return 'Date'
+    if len(set(col.dropna())) < len(col.dropna()) / 2:
+        return 'Category'
+    if all(isinstance(x, str) for x in col.dropna()):
+        return 'Text'
 
-    Returns:
-    - bool: True if the Series is considered categorical, False otherwise.
-    """
-    series = col.dropna()
-    if len(series) > 0:  # Check if series is not empty
-        unique_ratio = len(series.unique()) / len(series)
-        if unique_ratio <= max_unique_ratio:  # Check if unique value ratio is below or equal to the threshold
-            return True
-    return False
+    return 'Text'
 
-def is_complex(col: pd.Series):
-    """
-    Checks if the given pandas Series contains complex number data.
-
-    Parameters:
-    - col (pd.Series): The pandas Series to check.
-
-    Returns:
-    - bool: True if the Series contains complex numbers, False otherwise.
-    """
-    try:
-        for value in col.dropna():
-            complex(value)  # Attempt to convert each value to complex
-    except (ValueError, TypeError):
-        return False
-    return True
-
-def convert_to_datetime(df, col, date_formats):
-    """
-    Attempts to convert a specified column in a DataFrame to datetime using a list of date formats.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to convert.
-    - col (str): The name of the column to convert.
-    - date_formats (list): A list of string date formats to try for conversion.
-
-    Returns:
-    - pd.Series: The converted column as a pandas Series, or the original column if conversion is not successful.
-    """
-    converted_col = None
-    for date_format in date_formats:
-        try:
-            converted_col = pd.to_datetime(df[col], errors='coerce', format=date_format)
-            if converted_col.notna().any():
-                break
-        except ValueError:
-            continue
-    return converted_col if converted_col is not None and converted_col.notna().any() else df[col]
-
-def convert_to_numeric(df, col):
-    """
-    Converts a specified column in a DataFrame to a numeric data type, downcasting to float or integer if possible.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to convert.
-    - col (str): The name of the column to convert.
-
-    Returns:
-    - pd.Series: The column converted to numeric data type.
-    """
-    converted_col = pd.to_numeric(df[col], errors='coerce')
-    if converted_col.notna().any():
-        df[col] = converted_col
-        if df[col].dtype == 'float':
-            df[col] = pd.to_numeric(df[col], downcast='float')
-        elif df[col].dtype == 'int':
-            df[col] = pd.to_numeric(df[col], downcast='integer')
-    return df[col]
-
-def convert_to_timedelta(df, col):
-    """
-    Converts a specified column in a DataFrame to timedelta.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to convert.
-    - col (str): The name of the column to convert.
-
-    Returns:
-    - pd.Series: The converted column as a pandas Series, or the original column if conversion is not successful.
-    """
-    converted_col = pd.to_timedelta(df[col], errors='coerce')
-    return converted_col if converted_col.notna().any() else df[col]
-
-def convert_to_boolean(df, col):
-    """
-    Converts a specified column in a DataFrame to boolean, if possible.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to convert.
-    - col (str): The name of the column to convert.
-
-    Returns:
-    - pd.Series: The column converted to boolean, or the original column if conversion is not possible.
-    """
-    if all(val.lower() in ['true', 'false'] for val in df[col].astype(str).str.lower()):
-        return df[col].astype(bool)
-    return df[col]
-
-def convert_to_complex(df, col, is_complex):
-    """
-    Converts a specified column in a DataFrame to complex numbers, if the column contains complex number data.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to convert.
-    - col (str): The name of the column to convert.
-    - is_complex_func (function): A function to check if the column contains complex number data.
-
-    Returns:
-    - pd.Series: The column converted to complex numbers, or the original column if conversion is not successful.
-    """
-    if is_complex(df[col]):
-        return df[col].apply(lambda x: complex(x) if pd.notna(x) else x)
-    return df[col]
-
-def convert_to_categorical(df, col, is_category):
-    """
-    Converts a specified column in a DataFrame to categorical data type, if the column is deemed categorical.
-
-    Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to convert.
-    - col (str): The name of the column to convert.
-    - is_category_func (function): A function to check if the column is deemed categorical.
-
-    Returns:
-    - pd.Series: The column converted to categorical data type.
-    """
-    if is_category(df[col]):
-        return df[col].astype('category')
-    return df[col]
 
 def infer_and_convert_data_types(df):
     """
@@ -153,51 +53,21 @@ def infer_and_convert_data_types(df):
     Returns:
     - pd.DataFrame: The DataFrame with columns converted to inferred data types.
     """
-    date_formats = [
-        '%Y-%m-%d',  # Standard YYYY-MM-DD
-        '%d-%m-%Y',  # Non-standard DD-MM-YYYY
-        '%m/%d/%Y',  # Standard MM/DD/YYYY
-        '%d/%m/%Y',  # Standard DD/MM/YYYY
-        '%Y/%m/%d',  # Non-standard YYYY/MM/DD
-        '%Y%m%d',    # Standard YYYYMMDD
-        '%m/%Y',      # Standard MM/YYYY
-        '%Y/%m',      # Non-standard YYYY/MM
-        '%m.%d.%Y',  # Non-standard MM.DD.YYYY
-        '%d.%m.%Y',  # Non-standard DD.MM.YYYY
-        '%d %B',     # Non-standard DD Month (e.g., 01 January)
-        '%d%B',      # Non-standard DDMonth (e.g., 01January)
-        '%B %d',     # Non-standard Month DD (e.g., January 01)
-        '%B%d',      # Non-standard MonthDD (e.g., January01)
-        '%d %B %Y',  # Non-standard DD Month YYYY (e.g., 01 January 2022)
-        '%d%B%Y',    # Non-standard DDMonthYYYY (e.g., 01January2022)
-        '%B %d, %Y', # Non-standard Month DD, YYYY (e.g., January 01, 2022) **
-        '%Y %B %d',   # Non-standard YYYY Month DD (e.g., 2022 January 01)
-        '%B %Y',       # Non-standard Month Year (e.g., January 2022)
-        '%Y %B',       # Non-standard Year Month (e.g., 2022 January)
-        '%B%Y',        # Non-standard MonthYear (e.g., January2022)
-        '%Y%B',        # Non-standard YearMonth (e.g., 2022January)
-    ]
-
     for col in df.columns:
-
-        if df[col].dtype == object or df[col].dtype == int:
-            df[col] = convert_to_datetime(df, col, date_formats)
-
-        if df[col].dtype == object:
+        dtype = infer_data_type(df[col])
+        if dtype == 'Decimal':
             df[col] = convert_to_numeric(df, col)
-
-        if df[col].dtype == object:
+        elif dtype == 'Date':
+            df[col] = convert_to_datetime(df, col)
+        elif dtype == 'Time Duration':
             df[col] = convert_to_timedelta(df, col)
-
-        if df[col].dtype == object:
+        elif dtype == 'Complex Number':
+            df[col] = convert_to_complex(df, col)
+        elif dtype == 'Boolean':
             df[col] = convert_to_boolean(df, col)
-
-        if df[col].dtype == object:
-            df[col] = convert_to_complex(df, col, is_complex)
-
-        if df[col].dtype == object:
-            df[col] = convert_to_categorical(df, col, is_category)
-
+        elif dtype == 'Category':
+            df[col] = df[col].astype('category')
+    
     return df
 
 def get_user_friendly_dtype(dtype):
@@ -220,6 +90,8 @@ def get_user_friendly_dtype(dtype):
     elif dtype_name.startswith('timedelta'):
         return 'Time Duration'
     else:
+        print("\n \n HELLLLOOO \n \n")
+        print(dtype_name)
         return {
             'object': 'Text',
             'bool': 'Boolean',
@@ -255,38 +127,55 @@ def serialise_dataframe(df):
     
     return df.to_dict(orient='records')
 
-def can_convert(col, conversion_function):
-    """
-    Checks if the values in a pandas Series can be converted using a given conversion function without raising an error.
 
-    Parameters:
-    - col (pd.Series): The pandas Series to check.
-    - conversion_function (callable): The function to use for attempting the conversion.
+# def override_data(df, column, new_type):
+#     """
+#     Attempts to override the data type of a specified column in the DataFrame to a new data type,
+#     using the custom conversion functions and storing the override in Django models.
 
-    Returns:
-    - bool: True if the conversion can be performed without errors, False otherwise.
-    """
-    try:
-        # Attempt conversion
-        conversion_function(col)
-        return True
-    except:
-        return False
+#     Parameters:
+#     - df (pd.DataFrame): The DataFrame containing the column to override.
+#     - column (str): The name of the column to override.
+#     - new_type (str): The new data type to apply to the column.
 
-def preprocess_for_float_conversion(col):
-    """
-    Preprocesses a pandas Series for float conversion by replacing non-convertible values with NaN.
+#     Returns:
+#     - tuple: A tuple containing a boolean indicating success or failure, and a string message detailing the outcome.
+#     """
+#     print(f"Attempting to override column '{column}' to new type '{new_type}'.")
 
-    Parameters:
-    - col (pd.Series): The pandas Series to preprocess.
+#     conversion_functions = {
+#         'Date': lambda df, col: convert_to_datetime(df, col),
+#         'Integer': lambda df, col: convert_to_numeric(df, col),  # Note: May need additional logic to ensure Integer conversion
+#         'Decimal': lambda df, col: convert_to_numeric(df, col),
+#         'Time Duration': lambda df, col: convert_to_timedelta(df, col),
+#         'Boolean': lambda df, col: convert_to_boolean(df, col),
+#         'Complex Number': lambda df, col: convert_to_complex(df, col),
+#         'Category': lambda df, col: convert_to_categorical(df, col, is_category),
+#         'Text': lambda df, col: df[col].astype(str)
+#     }
 
-    Returns:
-    - pd.Series: The preprocessed Series ready for float conversion.
-    """
-    col = pd.to_numeric(col, errors='coerce')
-    return col
+#     try:
+#         # Find the most recent dataset
+#         latest_dataset = Dataset.objects.all().order_by('-uploaded_at').first()
+#         if not latest_dataset:
+#             return False, "No dataset available for overriding."
 
+#         if new_type in conversion_functions:
+#             df[column] = conversion_functions[new_type](df, column)
+#             # Update or create the ColumnType record
+#             column_type, created = ColumnType.objects.update_or_create(
+#                 dataset=latest_dataset,
+#                 column_name=column,
+#                 defaults={'user_modified_type': new_type}
+#             )
+#             return True, f"Data type overridden successfully to {new_type} for column '{column}'."
+#         else:
+#             return False, f"Invalid data type specified: {new_type}."
 
+#     except Exception as e:
+#         traceback_str = traceback.format_exc()
+#         print(traceback_str)
+#         return False, str(e)
 def override_data(df, column, new_type):
     """
     Attempts to override the data type of a specified column in the DataFrame to a new data type.
@@ -302,14 +191,14 @@ def override_data(df, column, new_type):
     print(f"Attempting to override column '{column}' to new type '{new_type}'.")
     try:
         conversion_functions = {
-            'Date': lambda col: pd.to_datetime(df[col], errors='raise'),
+            'Date': lambda col: convert_to_datetime(df, col),
             'Integer': lambda col: pd.to_numeric(df[col], errors='raise').astype('Int64'),
-            'Decimal':  lambda col: pd.to_numeric(df[col].replace('Not Available', np.nan), errors='raise'),
+            'Decimal': lambda col: convert_to_numeric(df, col),  # Using convert_to_numeric for Decimal as well
             'Time Duration': lambda col: pd.to_timedelta(df[col], errors='raise'),
-            'Boolean': lambda col: df[col].astype(bool),
+            'Boolean': lambda col: convert_to_boolean(df, col),
             'Complex Number': lambda col: df[col].apply(lambda x: complex(x) if pd.notna(x) else x),
-            'Category': lambda col: df[col].astype('category'),
-            'Text': lambda col: df[col].astype(str) 
+            'Category': lambda col: convert_to_categorical(df, col, is_category),  # Note: Ensure you have an is_category function defined
+            'Text': lambda col: df[col].astype(str)
         }
 
         if new_type in conversion_functions:
@@ -328,3 +217,21 @@ def override_data(df, column, new_type):
         traceback_str = traceback.format_exc()
         print(traceback_str)
         return False, str(e)
+    
+def can_convert(col, conversion_function):
+    """
+    Checks if the values in a pandas Series can be converted using a given conversion function without raising an error.
+
+    Parameters:
+    - col (pd.Series): The pandas Series to check.
+    - conversion_function (callable): The function to use for attempting the conversion.
+
+    Returns:
+    - bool: True if the conversion can be performed without errors, False otherwise.
+    """
+    try:
+        # Attempt conversion
+        conversion_function(col)
+        return True
+    except:
+        return False
