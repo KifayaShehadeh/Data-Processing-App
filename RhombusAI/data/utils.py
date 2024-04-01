@@ -14,6 +14,19 @@ from django.db.models import Max
 column_type_overrides = {}
 
 def infer_data_type(col):
+    """
+    Infers the most likely data type of a given pandas Series by analyzing its contents.
+
+    The function checks for specific patterns and types within the series, such as boolean values,
+    complex numbers, numeric values, currencies, time durations, dates, categories, and textual data.
+    It preprocesses the data to normalize boolean values and clean numeric and textual representations.
+
+    Parameters:
+    - col (pd.Series): A pandas Series whose data type is to be inferred.
+
+    Returns:
+    - str: A string representing the inferred data type, such as 'Boolean', 'Decimal', 'Date', etc.
+    """
     # Preprocess column, removing commas and converting to None types as needed
     col_normalised_bool = col.apply(normalise_boolean)
     if pd.api.types.is_bool_dtype(col_normalised_bool):
@@ -43,15 +56,18 @@ def infer_data_type(col):
     return 'Text'
 
 
+
 def infer_and_convert_data_types(df):
     """
-    Infers and converts the data types of columns in the given DataFrame to more specific types where possible.
+    Iterates through each column of a DataFrame, infers its data type, and converts it to a more
+    specific type where applicable. This can help in optimizing memory usage and ensuring data
+    integrity by enforcing consistent data types across the DataFrame.
 
     Parameters:
-    - df (pd.DataFrame): The DataFrame whose columns are to be type-converted.
+    - df (pd.DataFrame): The DataFrame whose columns are to be analyzed and converted.
 
     Returns:
-    - pd.DataFrame: The DataFrame with columns converted to inferred data types.
+    - pd.DataFrame: The same DataFrame with its columns converted to the inferred data types.
     """
     for col in df.columns:
         dtype = infer_data_type(df[col])
@@ -72,13 +88,15 @@ def infer_and_convert_data_types(df):
 
 def get_user_friendly_dtype(dtype):
     """
-    Converts a pandas data type into a user-friendly string.
+    Converts a pandas data type object into a more user-friendly string representation that is easier
+    to understand and work with in a data processing context.
 
     Parameters:
-    - dtype: The data type to convert.
+    - dtype: A pandas dtype object or a string that represents a dtype.
 
     Returns:
-    - str: A user-friendly string representation of the data type.
+    - str: A user-friendly string representation of the input data type, such as 'Integer', 'Decimal',
+    'Complex Number', 'Time Duration', 'Boolean', 'Date', 'Category', or 'Text'.
     """
     dtype_name = str(dtype)
     if dtype_name.startswith('int') or dtype_name.startswith('uint'):
@@ -90,8 +108,6 @@ def get_user_friendly_dtype(dtype):
     elif dtype_name.startswith('timedelta'):
         return 'Time Duration'
     else:
-        print("\n \n HELLLLOOO \n \n")
-        print(dtype_name)
         return {
             'object': 'Text',
             'bool': 'Boolean',
@@ -101,13 +117,16 @@ def get_user_friendly_dtype(dtype):
     
 def serialise_dataframe(df):
     """
-    Serialises a DataFrame to a list of dictionaries, making sure the values are JSON serialisable.
+    Converts a pandas DataFrame into a list of dictionaries, with special handling to ensure all
+    data types are properly converted to formats suitable for JSON serialization. This includes
+    converting date and time types to strings, handling NaN and NaT values, and ensuring categorical
+    data is represented accurately.
 
     Parameters:
-    - df (pd.DataFrame): The DataFrame to serialise.
+    - df (pd.DataFrame): The DataFrame to serialize.
 
     Returns:
-    - list: A list of dictionaries representing the rows of the DataFrame, with values converted for JSON serialisation.
+    - list: A list of dictionaries, each representing a row in the DataFrame, ready for JSON serialization.
     """
     df = df.copy()
     for column in df.columns:
@@ -127,66 +146,20 @@ def serialise_dataframe(df):
     
     return df.to_dict(orient='records')
 
-
-# def override_data(df, column, new_type):
-#     """
-#     Attempts to override the data type of a specified column in the DataFrame to a new data type,
-#     using the custom conversion functions and storing the override in Django models.
-
-#     Parameters:
-#     - df (pd.DataFrame): The DataFrame containing the column to override.
-#     - column (str): The name of the column to override.
-#     - new_type (str): The new data type to apply to the column.
-
-#     Returns:
-#     - tuple: A tuple containing a boolean indicating success or failure, and a string message detailing the outcome.
-#     """
-#     print(f"Attempting to override column '{column}' to new type '{new_type}'.")
-
-#     conversion_functions = {
-#         'Date': lambda df, col: convert_to_datetime(df, col),
-#         'Integer': lambda df, col: convert_to_numeric(df, col),  # Note: May need additional logic to ensure Integer conversion
-#         'Decimal': lambda df, col: convert_to_numeric(df, col),
-#         'Time Duration': lambda df, col: convert_to_timedelta(df, col),
-#         'Boolean': lambda df, col: convert_to_boolean(df, col),
-#         'Complex Number': lambda df, col: convert_to_complex(df, col),
-#         'Category': lambda df, col: convert_to_categorical(df, col, is_category),
-#         'Text': lambda df, col: df[col].astype(str)
-#     }
-
-#     try:
-#         # Find the most recent dataset
-#         latest_dataset = Dataset.objects.all().order_by('-uploaded_at').first()
-#         if not latest_dataset:
-#             return False, "No dataset available for overriding."
-
-#         if new_type in conversion_functions:
-#             df[column] = conversion_functions[new_type](df, column)
-#             # Update or create the ColumnType record
-#             column_type, created = ColumnType.objects.update_or_create(
-#                 dataset=latest_dataset,
-#                 column_name=column,
-#                 defaults={'user_modified_type': new_type}
-#             )
-#             return True, f"Data type overridden successfully to {new_type} for column '{column}'."
-#         else:
-#             return False, f"Invalid data type specified: {new_type}."
-
-#     except Exception as e:
-#         traceback_str = traceback.format_exc()
-#         print(traceback_str)
-#         return False, str(e)
 def override_data(df, column, new_type):
     """
-    Attempts to override the data type of a specified column in the DataFrame to a new data type.
+    Attempts to explicitly convert the data type of a specified column in a DataFrame to a new
+    specified type. This can be useful for data cleaning and preparation, especially if the
+    initial data type inference was incorrect or suboptimal.
 
     Parameters:
-    - df (pd.DataFrame): The DataFrame containing the column to override.
-    - column (str): The name of the column to override.
-    - new_type (str): The new data type to apply to the column.
+    - df (pd.DataFrame): The DataFrame containing the column to be converted.
+    - column (str): The name of the column whose data type is to be overridden.
+    - new_type (str): The target data type to convert the column to.
 
     Returns:
-    - tuple: A tuple containing a boolean indicating success or failure, and a string message detailing the outcome.
+    - tuple: A tuple containing a boolean indicating whether the conversion was successful, and a
+             string message with details about the conversion outcome.
     """
     print(f"Attempting to override column '{column}' to new type '{new_type}'.")
     try:

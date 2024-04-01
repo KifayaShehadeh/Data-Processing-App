@@ -3,14 +3,8 @@ import pandas as pd
 import re
 import pandas as pd
 import numpy as np
-import traceback
 from dateutil import parser
-from dateutil.parser import ParserError
 from .typechecks import looks_like_number, is_complex
-
-def is_allowed_none(val):
-    return pd.isnull(val) or str(val).strip().lower() in ALLOWED_NONE_TYPES
-
 
 ALLOWED_NONE_TYPES = [
     "nan",
@@ -26,6 +20,9 @@ ALLOWED_NONE_TYPES = [
     "not available",
     ''
 ]
+
+def is_allowed_none(val):
+    return pd.isnull(val) or str(val).strip().lower() in ALLOWED_NONE_TYPES
 
 def convert_to_categorical(df, col, is_category):
     """
@@ -85,6 +82,25 @@ def convert_to_timedelta(df, col):
         return df[col]
 
 def convert_to_numeric(df, col):
+    """
+    Converts a column in a DataFrame to numeric values.
+
+    Parameters:
+    - df (DataFrame): The pandas DataFrame containing the column to be converted.
+    - col (str): The name of the column to be converted.
+
+    Returns:
+    - pandas.Series: The converted column with numeric data types.
+
+    Raises:
+    - ValueError: If the column contains complex numbers or encounters errors during conversion.
+
+    Notes:
+    - This function attempts to convert string representations of numbers or percentages into numeric values.
+    - String representations of percentages are converted to decimals.
+    - Non-string values are kept as they are.
+    - Any non-convertible values are coerced to NaN (Not a Number).
+    """
     try:
         # First, check if there are complex numbers in the column
         if df[col].apply(lambda x: is_complex(str(x))).any():
@@ -107,18 +123,6 @@ def convert_to_numeric(df, col):
     except Exception as e:
         raise ValueError(f"Error converting column '{col}' to numeric: {e}")
 
-
-# def convert_to_numeric(df, col):
-#     try:
-#         # Convert values that look like a number or percentage to decimals, else set to NaN
-#         df[col] = df[col].apply(lambda x: float(x.replace(',', '').strip('%')) / 100 if isinstance(x, str) and x.endswith('%') else float(x.replace(',', '')) if looks_like_number(x) else np.nan)
-#         # Now that the column is cleaned up, coerce any stragglers to NaN
-#         converted_col = pd.to_numeric(df[col], errors='coerce')
-#         print(f"Converted {col} dtype: {converted_col.dtype}")  # Diagnostic print
-#         return converted_col
-#     except Exception as e:
-#         print(f"Error converting column '{col}' to numeric: {e}")
-#         return df[col]
 
 def convert_to_boolean(df, col):
     """

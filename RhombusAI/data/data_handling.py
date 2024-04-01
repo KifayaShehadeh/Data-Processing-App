@@ -7,6 +7,15 @@ from dateutil.parser import ParserError
 from .conversions import is_allowed_none
 
 def normalise_boolean(val):
+    """
+    Normalizes boolean values represented as strings to Python booleans.
+
+    Parameters:
+    - val (str or any): The value to normalize.
+
+    Returns:
+    - bool or pd.NA: The normalized boolean value, or pd.NA if unconvertible.
+    """
     true_values = ['true', '1', 'yes', 't', 'on']
     false_values = ['false', '0', 'no', 'f', 'off']
     if str(val).lower() in true_values:
@@ -16,9 +25,17 @@ def normalise_boolean(val):
     else:
         return pd.NA  # Use pandas NA for undefined or unconvertible values
 
-    
 
 def parse_mixed_data(col):
+    """
+    Determines the types of data present in a column of mixed data types.
+
+    Parameters:
+    - col (iterable): The column containing mixed data types.
+
+    Returns:
+    - set: A set of unique data types found in the column ('number', 'date', 'string').
+    """
     # Check if there are different types of data in the column (excluding allowed none types)
     unique_types = set()
     for val in col:
@@ -44,25 +61,34 @@ def parse_mixed_data(col):
 
 
 def can_parse_date(string):
-    try:
-        # Attempt to parse the string as a date.
-        result = parser.parse(string, fuzzy=False)
-        
-        # Check if the result is really a date by ensuring it doesn't match certain non-date patterns
-        non_date_patterns = [
-            r"^\d+$",  # Strings that are only digits are not dates.
-            r"[a-zA-Z]",  # Strings containing letters that were not parsed into a month name are not dates.
-            r"^-?\d+(\.\d+)?$",  # Strings that represent a float number are not dates.
-            # Add any more patterns that are known to be not dates.
-        ]
-        if any(re.search(pattern, string) for pattern in non_date_patterns):
-            return False
-        # If the date was parsed without fuzzy logic, it is likely a valid date.
-        return True
-    except (parser.ParserError, TypeError, ValueError):
-        # If the parsing fails, it's not a date.
-        return False
+    """
+    Checks if a string can be parsed as a date, excluding patterns that are not dates.
+
+    Parameters:
     
+    string (str): The string to check for date validity.
+
+        Returns:
+        
+    bool: True if the string can be parsed as a date, False otherwise."""
+    # Define non-date patterns to exclude strings that shouldn't be considered as dates
+    non_date_patterns = [
+        r"^\d+$",  # Strings that are only digits are not dates
+        r"^-?\d+(.\d+)?$",  # Strings that represent a float number are not dates
+    ]
+    # Check against non-date patterns before attempting to parse
+    if any(re.search(pattern, string) for pattern in non_date_patterns):
+        return False
+    try:# Attempt to parse the string as a date without using fuzzy logic
+        parsed_date = parser.parse(string, fuzzy=False)
+        # Additional check to ensure the string represents a meaningful date# For instance, ensuring the year makes sense (you might adjust this range)
+        if parsed_date.year >= 1000 and parsed_date.year <= 9999:
+            return True
+        else:
+            return False
+    except (parser.ParserError, TypeError, ValueError):# If parsing fails, the string is not a date
+        return False
+
 def preprocess_for_float_conversion(col):
     """
     Preprocesses a pandas Series for float conversion by replacing non-convertible values with NaN.

@@ -70,6 +70,21 @@ def is_complex(col: pd.Series):
 
 
 def is_complex(val):
+    """
+    Determines whether a given value represents a complex number.
+
+    This function checks if the input is either an instance of a complex number or a string that
+    represents a complex number in the standard mathematical form (a + bi). The function
+    supports strings with or without spaces around the '+' or '-' signs. It also handles cases
+    where either the real part (a) or the imaginary part (bi) is omitted.
+
+    Parameters:
+    - val (complex, str): The value to be checked. Can be an actual complex number or a string.
+
+    Returns:
+    - bool: True if `val` is a complex number or a string that represents a complex number.
+            False otherwise.
+    """
     if isinstance(val, complex):
         return True
     if isinstance(val, str):
@@ -80,6 +95,20 @@ def is_complex(val):
 
 
 def is_timedelta(string):
+    """
+    Checks if a string represents a time duration using common time units.
+
+    This function searches for patterns in the string that indicate time units, such as
+    'years', 'months', 'weeks', 'days', 'hours', 'minutes', and 'seconds'. The presence of
+    any of these units (with optional pluralization) and a preceding numeric value qualifies
+    the string as representing a time duration.
+
+    Parameters:
+    - string (str): The string to check for time duration representation.
+
+    Returns:
+    - bool: True if the string contains time duration patterns, False otherwise.
+    """
     # Patterns for different time units
     patterns = [
         r'\b\d+\s*years?\b',
@@ -93,6 +122,19 @@ def is_timedelta(string):
     return any(re.search(pattern, string, re.IGNORECASE) for pattern in patterns)
 
 def looks_like_number(val):
+    """
+    Determines whether a given value can be interpreted as a number.
+
+    This function checks if the input is a numerical data type (int, float, or np.number) or
+    a string that represents a number, potentially with commas as thousands separators or
+    a percentage sign at the end. It handles both positive and negative numbers.
+
+    Parameters:
+    - val: The value to check. Can be of any type.
+
+    Returns:
+    - bool: True if `val` can be interpreted as a numerical value, False otherwise.
+    """
     if pd.isna(val):
         return False
     if isinstance(val, (int, float, np.number)):
@@ -108,6 +150,19 @@ def looks_like_number(val):
     return False
 
 def looks_like_currency(val):
+    """
+    Determines whether a given value can be interpreted as a currency amount.
+
+    This function checks if the input is a string that represents a currency amount,
+    which could be just a number (with or without decimal points) or a currency code
+    followed by a space and a number. It handles both positive and negative amounts.
+
+    Parameters:
+    - val: The value to check. Can be of any type.
+
+    Returns:
+    - bool: True if `val` appears to represent a currency amount, False otherwise.
+    """
     if pd.isna(val):
         return False
     # This regex matches currency patterns like "50", "-40", or "EUR 40.00"
