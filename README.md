@@ -24,6 +24,8 @@ This web application is designed to process and display data, focusing on data t
 1. Navigate to the backend directory.
    
 3. Install the required Python packages.
+
+`pip install -r requirements.txt`
    
 5. Run the Django migrations to set up your database:
 
@@ -59,4 +61,8 @@ This will open the web application in your default browser. If it doesn't automa
 This project aims to provide a comprehensive solution for automating data cleaning tasks, with a focus on flexibility and user input. Given the variety of datasets, the application is designed to handle general cases with an understanding that some level of customisation may be necessary.
 
 For detailed information on the data type inference and conversion process, please refer to the provided Python scripts in the backend directory.
+
+### Contributors 
+Kifaya Shehadeh 
+Yusra Mahomed 
 
