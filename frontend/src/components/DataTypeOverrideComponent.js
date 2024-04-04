@@ -63,7 +63,7 @@ function DataTypeOverrideComponent({ columnsWithTypes, onSubmitOverride }) {
     }
   
     try {
-      const response = await fetch('http://127.0.0.1:8000/data/override/', {
+      const response = await fetch('https://data-processing-app-2.onrender.com/data/override/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
